@@ -1,6 +1,8 @@
-WINDOW_TITLE = "El Hareketi Tanıma - Profesyonel Arayüz"
+WINDOW_TITLE = "El Hareketi Tanıma"
 
 PANEL_TITLE = "Kontrol Paneli"
+APP_HEADER_TITLE = "El Hareketi Tanıma Sistemi"
+APP_HEADER_SUBTITLE = "Gerçek zamanlı tek-el jest analizi"
 VIDEO_TITLE = "Canlı Kamera Akışı"
 VIDEO_IDLE_HINT = "Kamerayı başlatmak için sağdaki butonu kullanın"
 VIDEO_STOPPED = "Kamera durduruldu"
@@ -14,6 +16,11 @@ LABEL_FPS_PREFIX = "FPS"
 
 BUTTON_START = "Kamerayı Başlat"
 BUTTON_STOP = "Kamerayı Durdur"
+HISTORY_TITLE = "Hareket Geçmişi"
+STATUS_READY = "Hazır"
+STATUS_RUNNING = "Kamera Aktif"
+STATUS_CAMERA_ERROR = "Kamera Hatası"
+SHORTCUT_HINT = "Kısayollar: Space Başlat/Durdur, Esc Çıkış"
 
 GESTURE_OK = "OK İşareti"
 GESTURE_PINCH = "Pinch"
