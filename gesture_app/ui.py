@@ -8,6 +8,10 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 
 from .config import (
+    CAMERA_HEIGHT,
+    CAMERA_WIDTH,
+    DRAW_LANDMARKS,
+    INFERENCE_EVERY_N_FRAMES,
     LEFT_PANEL_WIDTH,
     RIGHT_PANEL_WIDTH,
     VIDEO_SIZE,
@@ -65,6 +69,8 @@ class GestureApp(ctk.CTk):
         self.fps = 0.0
         self.gesture_history = deque(maxlen=10)
         self._last_history_gesture = ""
+        self._frame_count = 0
+        self._last_hand_landmarks = None
 
         self._build_layout()
         self._bind_shortcuts()
@@ -275,6 +281,9 @@ class GestureApp(ctk.CTk):
             self.video_label.configure(text=CAMERA_OPEN_ERROR)
             self._set_status(STATUS_CAMERA_ERROR, "#b91c1c")
             return
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
+        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         self.running = True
         self.start_button.configure(state="disabled")
@@ -302,14 +311,27 @@ class GestureApp(ctk.CTk):
                 continue
 
             frame = cv2.flip(frame, 1)
-            hand_landmarks_list = self.recognizer.process(frame)
+            self._frame_count += 1
+            should_run_inference = (self._frame_count % INFERENCE_EVERY_N_FRAMES) == 0
+            hand_landmarks_list = None
+            if should_run_inference:
+                hand_landmarks_list = self.recognizer.process(frame)
 
             if hand_landmarks_list:
-                hand_landmarks = hand_landmarks_list[0]
-                self.recognizer.draw_hand(frame, hand_landmarks)
+                self._last_hand_landmarks = hand_landmarks_list[0]
+                hand_landmarks = self._last_hand_landmarks
+                if DRAW_LANDMARKS:
+                    self.recognizer.draw_hand(frame, hand_landmarks)
                 gesture = self.recognizer.classify(hand_landmarks)
                 self.current_gesture = gesture.label
                 self.current_confidence = gesture.confidence
+            elif should_run_inference:
+                self._last_hand_landmarks = None
+                self.current_gesture = LABEL_NO_HAND
+                self.current_confidence = 0.0
+            elif self._last_hand_landmarks is not None:
+                if DRAW_LANDMARKS:
+                    self.recognizer.draw_hand(frame, self._last_hand_landmarks)
             else:
                 self.current_gesture = LABEL_NO_HAND
                 self.current_confidence = 0.0
@@ -346,7 +368,7 @@ class GestureApp(ctk.CTk):
             target_h = self.video_label.winfo_height()
             if target_w <= 1 or target_h <= 1:
                 target_w, target_h = VIDEO_SIZE
-            image = image.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            image = image.resize((target_w, target_h), Image.Resampling.BILINEAR)
             self.latest_image = ImageTk.PhotoImage(image=image)
 
             self.after(0, self._update_ui)
