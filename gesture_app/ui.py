@@ -7,7 +7,14 @@ import cv2
 import customtkinter as ctk
 from PIL import Image, ImageTk
 
-from .config import VIDEO_SIZE, WINDOW_MIN_SIZE, WINDOW_SIZE
+from .config import (
+    LEFT_PANEL_WIDTH,
+    RIGHT_PANEL_WIDTH,
+    VIDEO_SIZE,
+    WINDOW_MAXIMIZED_ON_START,
+    WINDOW_MIN_SIZE,
+    WINDOW_SIZE,
+)
 from .recognizer import HandGestureRecognizer
 from .text_constants import (
     BUTTON_START,
@@ -44,6 +51,8 @@ class GestureApp(ctk.CTk):
         self.title(WINDOW_TITLE)
         self.geometry(WINDOW_SIZE)
         self.minsize(*WINDOW_MIN_SIZE)
+        if WINDOW_MAXIMIZED_ON_START:
+            self.after(10, lambda: self.state("zoomed"))
 
         self.running = False
         self.capture: Optional[cv2.VideoCapture] = None
@@ -63,8 +72,9 @@ class GestureApp(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _build_layout(self) -> None:
-        self.grid_columnconfigure(0, weight=3)
-        self.grid_columnconfigure(1, weight=1)
+        # Left panel grows/shrinks with window size, right panel stays stable.
+        self.grid_columnconfigure(0, weight=1, minsize=LEFT_PANEL_WIDTH)
+        self.grid_columnconfigure(1, weight=0, minsize=RIGHT_PANEL_WIDTH)
         self.grid_rowconfigure(1, weight=1)
 
         self.header = ctk.CTkFrame(self, corner_radius=12, fg_color="#111827")
@@ -100,6 +110,7 @@ class GestureApp(ctk.CTk):
 
         self.video_frame = ctk.CTkFrame(self, corner_radius=14)
         self.video_frame.grid(row=1, column=0, sticky="nsew", padx=16, pady=16)
+        self.video_frame.grid_propagate(False)
         self.video_frame.grid_rowconfigure(1, weight=1)
         self.video_frame.grid_columnconfigure(0, weight=1)
 
@@ -120,6 +131,7 @@ class GestureApp(ctk.CTk):
 
         side_panel = ctk.CTkFrame(self, corner_radius=14)
         side_panel.grid(row=1, column=1, sticky="nsew", padx=(0, 16), pady=16)
+        side_panel.grid_propagate(False)
         side_panel.grid_columnconfigure(0, weight=1)
         side_panel.grid_rowconfigure(8, weight=1)
 
@@ -330,7 +342,11 @@ class GestureApp(ctk.CTk):
 
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image = Image.fromarray(frame_rgb)
-            image = image.resize(VIDEO_SIZE, Image.Resampling.LANCZOS)
+            target_w = self.video_label.winfo_width()
+            target_h = self.video_label.winfo_height()
+            if target_w <= 1 or target_h <= 1:
+                target_w, target_h = VIDEO_SIZE
+            image = image.resize((target_w, target_h), Image.Resampling.LANCZOS)
             self.latest_image = ImageTk.PhotoImage(image=image)
 
             self.after(0, self._update_ui)
